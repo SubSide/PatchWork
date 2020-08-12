@@ -5,6 +5,7 @@ import Pair from '../common/utils/Pair';
 import ServerPlayer from './models/ServerPlayer';
 import Room from '../common/models/Room';
 import ServerRoom from './models/ServerRoom';
+import { Socket } from 'socket.io';
 
 export default class GameManager {
     public packetHandler: PacketHandler;
@@ -46,22 +47,22 @@ export default class GameManager {
         // Go over all rooms, if the lastActive on both users are over 2 minutes we remove the game
         this.rooms.forEach(room => {
             if (
-                room.player1.lastActive < currentTime - GameManager.PLAYER_TIMEOUT &&
-                room.player2.lastActive < currentTime - GameManager.PLAYER_TIMEOUT
+                (room.player1 == null || room.player1.lastActive < currentTime - GameManager.PLAYER_TIMEOUT) &&
+                (room.player2 == null || room.player2.lastActive < currentTime - GameManager.PLAYER_TIMEOUT)
             ) {
                 removeRooms.push(room);
             }
         });
 
         removeRooms.forEach(room => {
-            console.info(`Removed '${room.id}' due to inactivity of both users`);
+            console.info(`Removed a room due to inactivity of both users`);
 
             // Disconnect both players to clean up open sockets
-            room.player1.socket.disconnect();
-            room.player2.socket.disconnect();
+            room.player1?.socket?.disconnect();
+            room.player2?.socket?.disconnect();
 
             // Remove it from the list of games
-            this.rooms.splice(this.rooms.findIndex(item => item.id == room.id ), 1);
+            this.rooms.splice(this.rooms.findIndex(item => item == room ), 1);
         })
     }
 
@@ -82,7 +83,7 @@ export default class GameManager {
             if (packet.type === 'socketChange') {
                 let player = this.players.get(packet.oldId);
                 // This automatically makes it fail-safe, if the user doesn't exist, we ignore it.
-                if (player !== undefined) {
+                if (player != null) {
                     player.socket.disconnect(true); // Close previous socket
                     player.socketId = socket.id; // Update the id
                     player.socket = socket; // Update the socket
@@ -90,20 +91,16 @@ export default class GameManager {
                     this.players.set(socket.id, player); // Set the user to the new id
                     console.info(`Succesfully changed Socket ID from '${packet.oldId}' to '${socket.id}'`);
                     // Send an update state so the user is back up to speed on where it was.
-                    player.room.sendUpdate();
+                    player.sendUpdate();
                 }
                 return;
             }
             
             // We get the user
             let player = this.players.get(socket.id);
-            if (player === undefined) {
-                // If we can't find a user, we send an error
-                throw Error('You\'re not yet in a game!.');
-            }
 
-            // If we found a user we handle it in the packetHandler
-            this.packetHandler.incomingPacket(player, packet);
+            // Handle packet
+            this.packetHandler.incomingPacket(socket, player, packet);
         
         } catch (e) {
             // If the error is of type ClientError we just want to know the client about it
@@ -118,10 +115,6 @@ export default class GameManager {
             socket.emit('errorPacket', new ErrorPacket('An unknown error ocurred. If the error persists first try reloading, then try opening this page in a new tab.'));
             
         }
-    }
-
-    createRoom(player: ServerPlayer) {
-        // TODO
     }
 
     /**

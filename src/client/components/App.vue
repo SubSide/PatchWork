@@ -1,20 +1,7 @@
 <template>
     <div class="body d-flex flex-column">
         <div class="navbar navbar-expand-sm" :class="{ 'navbar-dark bg-dark': !isLightTheme, 'navbar-light bg-light': isLightTheme }">
-            <span class="navbar-brand order-0" href="#">CAH</span>
-            <!-- <div class="collapse navbar-collapse order-sm-0 order-10 mx-5" id="navbarSupportedContent">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Link 1</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Link 2</a>
-                    </li>
-                </ul>
-            </div> -->
-            <!-- <button class="navbar-toggler order-6" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button> -->
+            <span class="navbar-brand order-0" href="#">PatchWork</span>
         </div>
         <div class="container position-relative">
             <game-overview />

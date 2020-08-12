@@ -1,5 +1,9 @@
 <template>
     <div class="body d-flex flex-column">
+        <div v-if="room == null">
+            <button class="btn btn-success" @click="createRoom">Create a room</button>
+        </div>
+        <div v-else>We got a room! Test. {{room}}</div>
     </div>
 </template>
 
@@ -11,6 +15,7 @@
     import RoomSettings from './RoomSettings.vue';
     import PlayerList from './PlayerList.vue';
     import ding from '../../assets/sounds/ding.wav';
+import { CreateRoomPacket } from '../../../common/network/ClientPackets';
 
     export default Vue.extend({
         name: 'gameOverview',
@@ -20,12 +25,10 @@
             },
         },
         methods: {
-            openLeaveRoom() {
-                (this.$refs.leavePrompt as any).show();
-            },
-            leaveRoom: function() {
-                // this.$socket.send(new LeaveRoomPacket());
+            createRoom() {
+                this.$socket.send(new CreateRoomPacket());
             }
+
         },
         components: {
             'game': Game,

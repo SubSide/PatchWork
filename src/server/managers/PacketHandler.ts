@@ -2,52 +2,76 @@ import { ClientPacketType, CreateRoomPacket, RequestStateUpdatePacket,StartGameP
 import GameManager from "../GameManager";
 import ClientError from "../util/ClientError";
 import ServerPlayer from "../models/ServerPlayer";
+import e from "express";
+import { Socket } from "socket.io";
+import ServerRoom from "../models/ServerRoom";
 
 export default class PacketHandler {
     constructor(public gameManager: GameManager) {
     }
 
-    incomingPacket(player: ServerPlayer, packet: ClientPacketType) {
-        switch (packet.type) {
-            case 'createRoom':
-                this.handleCreateRoom(player, packet);
-                break;
-            case 'requestStateUpdate':
-                this.requestStateUpdate(player, packet);
-                break;
-            case 'joinWithInvite':
-                this.handleJoinByInvite(player, packet);
-                break;
-            case 'startGame':
-                this.handleStartGame(player, packet);
-                break;
-        }
-        
+    incomingPacket(socket: Socket, player: ServerPlayer, packet: ClientPacketType) {
+
+        if (player == null) {
+            switch (packet.type) {
+                case 'createRoom':
+                    this.handleCreateRoom(packet, socket);
+                    break;
+                case 'joinWithInvite':
+                    this.handleJoinByInvite(packet, socket);
+                    break;
+                default:
+                    throw new ClientError("Malformed packet");
+            }
+        } else {
+            switch (packet.type) {
+                case 'startGame':
+                    this.handleStartGame(player, packet);
+                    break;
+                case 'requestStateUpdate':
+                    this.requestStateUpdate(player, packet);
+                    break;
+                default:
+                    throw new ClientError("Malformed packet");
+            }
+        }        
     }
 
-    private handleCreateRoom(player: ServerPlayer, packet: CreateRoomPacket) {
-        if (!player.canDo("createRoom", 1000)) {
-            throw new ClientError("Wait a moment before create a room again.");
+    private handleCreateRoom(packet: CreateRoomPacket, socket: Socket) {
+        if (this.gameManager.players.get(socket.id) != null) {
+            throw new ClientError("You're already in a game!");
         }
-        this.gameManager.createRoom(player);
+
+        let player = new ServerPlayer(socket.id, socket);
+        this.gameManager.players.set(socket.id, player);
+
+        let room = new ServerRoom(player);
+        player.room = room;
+        this.gameManager.rooms.push(room);
+
+        room.updateAllPlayers();
     }
 
-    private requestStateUpdate(player: ServerPlayer, packet: RequestStateUpdatePacket) {
-        player.room.sendUpdate();
-    }
-
-    private handleJoinByInvite(player: ServerPlayer, packet: JoinWithInvitePacket) {
-        if (!player.canDo("joinRoom", 2000)) {
-            throw new ClientError("Wait a moment before joining another room.");
+    private handleJoinByInvite(packet: JoinWithInvitePacket, socket: Socket) {
+        if (this.gameManager.players.get(socket.id) != null) {
+            throw new ClientError("You're already in a game!");
         }
-        
+
         let room = this.gameManager.rooms.find(room => room.inviteId == packet.inviteId);
         
         if (room == null) {
             throw new ClientError('No room with this invite link exists.');
         }
 
+        let player = new ServerPlayer(socket.id, socket);
+        this.gameManager.players.set(socket.id, player);
+
         room.join(player, packet.inviteId);
+        room.updateAllPlayers();
+    }
+
+    private requestStateUpdate(player: ServerPlayer, packet: RequestStateUpdatePacket) {
+        player.sendUpdate();
     }
 
     private handleStartGame(player: ServerPlayer, startGamePacket: StartGamePacket) {
@@ -55,9 +79,6 @@ export default class PacketHandler {
             throw new ClientError("Wait a moment before trying this action again!");
         }
 
-        // Update settings, we do this so if we change the settings and immediately press start
-        // We get the latest settings for sure
-        // We call updateSettings so we know for sure 
         player.room.start();
     }
 }

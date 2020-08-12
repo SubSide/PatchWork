@@ -9,12 +9,12 @@ export default class ServerPlayer implements Transmissible<Player> {
     public points: number;
     private cooldowns: Map<string, number> = new Map();
     private grid: boolean[][];
-    private has7x7: boolean = false
+    private has7x7: boolean = false;
+    public room: ServerRoom;
 
     constructor(
         public socketId: string,
         public socket: SocketIO.Socket,
-        public room: ServerRoom,
     ) {
         this.points = 0;
     }
@@ -37,6 +37,10 @@ export default class ServerPlayer implements Transmissible<Player> {
             grid: this.grid,
             has7x7: this.has7x7
         }
+    }
+
+    sendUpdate() {
+        this.room.sendUpdate(this);
     }
 
     sendPacket(packet: ServerPacket) {

@@ -11,8 +11,7 @@ export default class ServerRoom implements Transmissible<Game> {
     player2: ServerPlayer = null;
 
     constructor(
-        player: ServerPlayer,
-        public id: string
+        player: ServerPlayer
     ) {
         this.player1 = player;
     };
@@ -27,21 +26,23 @@ export default class ServerRoom implements Transmissible<Game> {
         // TODO do stuff
     }
 
-    sendUpdate() {
-        this.sendAllPlayers(new RoomStatePacket(this.getTransmitData()));
+
+    sendUpdate(player: ServerPlayer) {
+        if (this.player1 == player || this.player2 == player) {
+            player.sendPacket(new RoomStatePacket(this.player1 == player, this.getTransmitData()));
+        }
     }
 
-    sendAllPlayers(serverPacket: ServerPacket) {
-        this.player1.sendPacket(serverPacket);
-        this.player2.sendPacket(serverPacket);
+    updateAllPlayers() {
+        if (this.player1 != null) this.sendUpdate(this.player1);
+        if (this.player2 != null) this.sendUpdate(this.player2);
     }
 
     getTransmitData(): Game {
         return {
-            id: this.id,
             inviteId: this.inviteId,
             player1: this.player1.getTransmitData(),
-            player2: this.player2.getTransmitData()
+            player2: this.player2?.getTransmitData()
         }
     }
 

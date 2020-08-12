@@ -6,7 +6,7 @@ export interface ServerPacket {
 
 export class RoomStatePacket implements ServerPacket {
     type: 'roomState' = 'roomState';
-    constructor(public room: Room) {}
+    constructor(public isPlayer1: boolean, public room: Room) {}
 }
 
 export class ErrorPacket implements ServerPacket {
