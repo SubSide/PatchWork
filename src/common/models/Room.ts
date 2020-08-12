@@ -1,6 +1,6 @@
 import Player from "./Player";
 
-export default interface Game {
+export default interface Room {
     id: string;
     inviteId: string;
     player1: Player;
